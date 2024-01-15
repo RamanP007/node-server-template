@@ -1,12 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 
-export const errorHandler = (
-  err: Error,
+export const globalErrorHandler = (
+  error: Error,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ) => {
-  console.error(err);
-  res.status(500).send({ errors: [{ message: "Something went wrong" }] });
+  res.status(500).send({ success: false, message: error.message });
 };

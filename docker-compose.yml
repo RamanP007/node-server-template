@@ -11,6 +11,17 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
   redis:
     image: redis/redis-stack
     container_name: server-redis
@@ -22,6 +33,7 @@ services:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
     volumes:
       - redis:/data
+      - ./redis.conf:/usr/local/etc/redis
   server:
     image: server-dev
     build:
@@ -39,12 +51,13 @@ services:
     volumes:
       - .:/server/
 volumes:
+  pgadmin-data:
   postgres:
     name: server-postgres
+  pgadmin:
+    name: pgadmin-data
   redis:
     name: server-redis
-  pgadmin:
-    name: server-pgadmin
 networks:
   default:
     name: server

@@ -53,7 +53,7 @@ export class UserService {
 
   async create(
     email: string,
-    password: string,
+    password?: string,
     fullname?: string,
     mobile?: string,
     profileImage?: string,
@@ -61,7 +61,12 @@ export class UserService {
     googleId?: string,
     facebookId?: string
   ) {
-    const { salt, hash } = utilsService.hashPassword(password, 10);
+    let passwordHash, passwordMeta;
+    if (password) {
+      const { salt, hash } = utilsService.hashPassword(password, 10);
+      passwordHash = hash;
+      passwordMeta = salt;
+    }
     return await prisma.user.create({
       data: {
         email,
@@ -71,8 +76,8 @@ export class UserService {
         type,
         UserMeta: {
           create: {
-            passwordHash: hash,
-            passwordMeta: salt,
+            passwordHash,
+            passwordMeta,
             isEmailVerified: googleId || facebookId ? true : false,
             googleId,
             facebookId,
@@ -80,6 +85,33 @@ export class UserService {
         },
       },
     });
+  }
+
+  async createOrUpdateByGoogle(
+    email: string,
+    googleId: string,
+    fullname?: string,
+    profileImage?: string
+  ) {
+    const user = await this.getByEmail(email);
+    if (user) {
+      await prisma.userMeta.update({
+        data: { googleId },
+        where: {
+          userId: user.id,
+        },
+      });
+    } else {
+      return await this.create(
+        email,
+        undefined,
+        fullname,
+        undefined,
+        profileImage,
+        UserType.User,
+        googleId
+      );
+    }
   }
 
   async validateCredential(email: string, password: string) {

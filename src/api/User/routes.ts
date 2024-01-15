@@ -1,10 +1,14 @@
 import express, { Router } from "express";
-import { UserController } from "./userController";
+import {
+  AuthenticateSession,
+  UserAuthenticateSession,
+} from "../../middlewares/AuthenticateSession";
+import UserController from "./userController";
 
 const router: Router = express.Router();
-const user = new UserController();
+const User = new UserController();
 
 /* Authentication */
-router.post("/signin", user.authUser);
+router.post("/logout", AuthenticateSession, User.logout);
 
 export default router;
