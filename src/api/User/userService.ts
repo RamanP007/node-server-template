@@ -93,14 +93,15 @@ export class UserService {
     fullname?: string,
     profileImage?: string
   ) {
-    const user = await this.getByEmail(email);
-    if (user) {
+    if (await this.isEmailAlreadyExist(email)) {
+      const user = await this.getByEmail(email);
       await prisma.userMeta.update({
         data: { googleId },
         where: {
           userId: user.id,
         },
       });
+      return user;
     } else {
       return await this.create(
         email,

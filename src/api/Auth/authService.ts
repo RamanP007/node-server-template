@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { UserType } from "@prisma/client";
+import { Prisma, User, UserType } from "@prisma/client";
 import { UserService } from "../User";
 import * as ErrorResponse from "../../responses";
 import client from "../../redis.config";
@@ -56,7 +56,7 @@ export class AuthService {
       throw new Error(ErrorResponse.default.MSG021);
     }
 
-    let user;
+    let user: User;
     if (googleId) {
       user = await usersService.createOrUpdateByGoogle(
         email,
@@ -64,18 +64,18 @@ export class AuthService {
         fullname,
         profileImage
       );
+    } else {
+      user = await usersService.create(
+        email,
+        password,
+        fullname,
+        mobile,
+        profileImage,
+        type,
+        googleId,
+        facebookId
+      );
     }
-
-    user = await usersService.create(
-      email,
-      password,
-      fullname,
-      mobile,
-      profileImage,
-      type,
-      googleId,
-      facebookId
-    );
 
     if (user instanceof Error) throw new Error(user.message);
     const accessToken = this.generateJwt({ id: user.id, type: user.type });

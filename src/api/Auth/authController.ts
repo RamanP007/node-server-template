@@ -129,14 +129,12 @@ export default class AuthController {
 
       if (user instanceof Error) {
         throw new Error(user.message);
+      } else {
+        res.cookie(`__${user.type.toLowerCase()}AccessToken`, user.accessToken);
+        res.redirect(process.env.USER_REDIRECT_URI || "");
+        return;
       }
-
-      // Code to handle user authentication and retrieval using the profile data
-
-      res.redirect("/");
     } catch (error) {
-      console.log("errorrrr", error);
-
       next(error);
     }
   }
