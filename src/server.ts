@@ -1,8 +1,4 @@
-import express, {
-  Application,
-  ErrorRequestHandler,
-  NextFunction,
-} from "express";
+import express, { Application } from "express";
 import cors from "cors";
 import RequestHandler from "./api";
 import "reflect-metadata";
@@ -12,6 +8,9 @@ import "./db.config";
 import { globalErrorHandler } from "./middlewares/Error";
 import cookieParser from "cookie-parser";
 import "./redis.config";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { WebSocket } from "./websocket";
 
 const app: Application = express();
 
@@ -24,6 +23,10 @@ RequestHandler(app);
 app.use(globalErrorHandler);
 console.log(listEndpoints(app as express.Express));
 
-app.listen(process.env.PORT || 9001, () => {
+export const httpServer = createServer(app);
+
+export const io = WebSocket(httpServer);
+
+httpServer.listen(process.env.PORT || 9001, () => {
   console.log(`🚀️ Server is running on port ${process.env.PORT || 9001}`);
 });

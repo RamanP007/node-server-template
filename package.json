@@ -32,7 +32,8 @@
     "pg": "^8.7.1",
     "redis": "^4.6.12",
     "reflect-metadata": "^0.1.13",
-    "sequelize": "^6.15.0"
+    "sequelize": "^6.15.0",
+    "socket.io": "^4.7.4"
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.11",
