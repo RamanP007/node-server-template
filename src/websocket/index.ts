@@ -16,4 +16,9 @@ export const WebSocket = (httpServer: http.Server) => {
       credentials: false,
     },
   });
+
+  //Emit event for testing
+  io.on("connection", (socket) => {
+    socket.emit("hello", "world");
+  });
 };
