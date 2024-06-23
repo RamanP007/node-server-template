@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextFunction, Request, Response } from "express";
+import { CookieOptions, NextFunction, Request, Response } from "express";
 import { AuthPayload, AuthService } from "./authService";
 import { LoginUserDTO, RegisterUserDTO } from "./dto";
 import { plainToClass } from "class-transformer";
 import { validate } from "../../utils/formatter";
 import axios from "axios";
 import { UserType } from "@prisma/client";
+import { UtilsService } from "../../utils/common";
 
 export type GoogleAuthPayload = {
   id: string;
@@ -18,9 +19,24 @@ export type GoogleAuthPayload = {
 };
 
 const authService: AuthService = new AuthService();
+const utilsService: UtilsService = new UtilsService();
 
 export default class AuthController {
-  async signup(req: Request, res: Response, next: NextFunction): Promise<void> {
+  setCookie(
+    res: Response,
+    key: string,
+    value: string,
+    options?: CookieOptions
+  ): void {
+    res.cookie(key, value, {
+      domain: utilsService.isProduction() ? options?.domain : "localhost",
+      expires: options?.expires
+        ? options.expires
+        : new Date(Date.now() + 86400000),
+      httpOnly: options?.httpOnly || false,
+    });
+  }
+  signup = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const args = plainToClass(RegisterUserDTO, {
         ...req.params,
@@ -39,22 +55,27 @@ export default class AuthController {
         if (user instanceof Error) {
           throw new Error(user.message);
         } else {
-          res.cookie(
+          this.setCookie(
+            res,
             `__${user.type.toLowerCase()}AccessToken`,
-            user.accessToken
+            user.accessToken,
+            {
+              httpOnly: true,
+            }
           );
-          res.status(200).send({
-            success: true,
+          this.setCookie(res, "isUserLoggedIn", "true", {
+            httpOnly: false,
           });
+          res.status(200).send({ success: true });
           return;
         }
       }
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async signIn(req: Request, res: Response, next: NextFunction) {
+  signIn = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const args = plainToClass(LoginUserDTO, {
         ...req.params,
@@ -71,17 +92,27 @@ export default class AuthController {
           args.email,
           args.password
         );
-
-        res.cookie(`__${user.type.toLowerCase()}AccessToken`, user.accessToken);
-        res.status(200).send({
-          success: true,
+        this.setCookie(
+          res,
+          `__${user.type.toLowerCase()}AccessToken`,
+          user.accessToken,
+          {
+            httpOnly: true,
+          }
+        );
+        this.setCookie(res, "isUserLoggedIn", "true", {
+          httpOnly: false,
         });
+        res.status(200).send({ success: true });
+
+        return;
       }
     } catch (error) {
       next(error);
     }
-  }
+  };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async googleAuth(req: Request, res: Response, next: NextFunction) {
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${process.env.REDIRECT_URI}&response_type=code&scope=profile email`;
     res.redirect(url);
@@ -130,8 +161,19 @@ export default class AuthController {
       if (user instanceof Error) {
         throw new Error(user.message);
       } else {
-        res.cookie(`__${user.type.toLowerCase()}AccessToken`, user.accessToken);
-        res.redirect(process.env.USER_REDIRECT_URI || "");
+        this.setCookie(
+          res,
+          `__${user.type.toLowerCase()}AccessToken`,
+          user.accessToken,
+          {
+            httpOnly: true,
+          }
+        );
+        this.setCookie(res, "isUserLoggedIn", "true", {
+          httpOnly: false,
+        });
+        res.status(200).send({ success: true });
+
         return;
       }
     } catch (error) {

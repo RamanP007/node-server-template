@@ -1,4 +1,7 @@
 import * as crypto from "node:crypto";
+import { v4 as uuidv4 } from "uuid";
+import { Environment } from "../common/types";
+import { client } from "../redis.config";
 
 export class UtilsService {
   generateSalt = (length?: number) => {
@@ -27,5 +30,18 @@ export class UtilsService {
     } else {
       return false;
     }
+  };
+
+  generateRandomUuid = () => {
+    return uuidv4();
+  };
+
+  isProduction = () => {
+    return process.env.ENVIRONMENT === Environment.PRODUCTION;
+  };
+
+  static getUserToken = async (userId: string) => {
+    const token = await client.get(userId);
+    return token ? true : false;
   };
 }

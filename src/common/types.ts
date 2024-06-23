@@ -6,3 +6,13 @@ export interface JwtAuthPayload extends JwtPayload {
   type: UserType;
   token: string;
 }
+
+export type UsersQueuePayload = {
+  id: string;
+  socketId: string;
+};
+
+export enum Environment {
+  DEVELOPMENT = "development",
+  PRODUCTION = "production",
+}
