@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { Secret } from "jsonwebtoken";
 import { JwtAuthPayload } from "../common/types";
 import { UserType } from "@prisma/client";
+import { UtilsService } from "../utils/common";
 
 const verifyJWT = (token: string) => {
   return jwt.verify(
@@ -10,34 +11,59 @@ const verifyJWT = (token: string) => {
   ) as JwtAuthPayload;
 };
 
-const AuthenticateSession = (
+const AuthenticateSession = async (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   const bearerHeader = req.headers["authorization"] || req.headers["cookie"];
 
   if (bearerHeader && typeof bearerHeader !== "undefined") {
     const bearer = req.headers["authorization"]
       ? bearerHeader.split(" ")
-      : bearerHeader.split("=");
+      : bearerHeader.split(";");
 
-    const bearerToken = bearer[1];
-    try {
-      const payload = verifyJWT(bearerToken);
+    let bearerToken = null;
+    bearer.forEach((b) => {
+      if (b.includes("AccessToken")) {
+        bearerToken = b.split("=")[1];
+      }
+    });
 
-      req[req.method === "GET" ? "query" : "body"] = {
-        ...req[req.method === "GET" ? "query" : "body"],
-        ...(payload as JwtAuthPayload),
-        token: bearerToken,
-      };
+    if (bearerToken) {
+      try {
+        const payload = verifyJWT(bearerToken);
+        const userToken = await UtilsService.getUserToken(payload.id);
 
-      next();
-    } catch (err) {
+        if (!userToken) {
+          res.clearCookie("__userAccessToken");
+          res.clearCookie("isUserLoggedIn");
+          res.status(403).send({ success: false, message: "Forbidden" });
+          return;
+        }
+
+        req[req.method === "GET" ? "query" : "body"] = {
+          ...req[req.method === "GET" ? "query" : "body"],
+          ...(payload as JwtAuthPayload),
+          token: bearerToken,
+        };
+
+        next();
+      } catch (err) {
+        res.clearCookie("__userAccessToken");
+        res.clearCookie("isUserLoggedIn");
+        res.status(403).send({ success: false, message: "Forbidden" });
+        return;
+      }
+    } else {
+      res.clearCookie("__userAccessToken");
+      res.clearCookie("isUserLoggedIn");
       res.status(403).send({ success: false, message: "Forbidden" });
       return;
     }
   } else {
+    res.clearCookie("__userAccessToken");
+    res.clearCookie("isUserLoggedIn");
     res.status(403).send({ success: false, message: "Forbidden" });
     return;
   }

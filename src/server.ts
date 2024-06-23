@@ -7,14 +7,18 @@ import listEndpoints from "express-list-endpoints";
 import "./db.config";
 import { globalErrorHandler } from "./middlewares/Error";
 import cookieParser from "cookie-parser";
-import "./redis.config";
 import { createServer } from "http";
-import { Server } from "socket.io";
-import { WebSocket } from "./websocket";
+import socketServer from "./websocket";
 
 const app: Application = express();
 
-app.use(cors());
+const CorsOptions = {
+  credentials: true,
+  origin: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type"],
+};
+app.use(cors(CorsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -23,9 +27,8 @@ RequestHandler(app);
 app.use(globalErrorHandler);
 console.log(listEndpoints(app as express.Express));
 
-export const httpServer = createServer(app);
-
-export const io = WebSocket(httpServer);
+const httpServer = createServer(app);
+socketServer.attach(httpServer);
 
 httpServer.listen(process.env.PORT || 9001, () => {
   console.log(`🚀️ Server is running on port ${process.env.PORT || 9001}`);

@@ -1,14 +1,17 @@
 import { plainToClass } from "class-transformer";
 import { NextFunction, Request, Response } from "express";
 import { JwtAuthPayload } from "../../common/dto";
-import client from "../../redis.config";
+import { client } from "../../redis.config";
 import dayjs from "dayjs";
 import _ from "lodash";
+import { UserService } from "./userService";
 
 type BlacklistTokenPayload = {
   token: string;
   setTime: number;
 };
+
+const usersService: UserService = new UserService();
 
 export default class UserController {
   blacklistToken = async (userId: string, token: string) => {
@@ -56,6 +59,10 @@ export default class UserController {
     }
   };
 
+  removeActiveToken = async (userId: string) => {
+    return await client.del(userId);
+  };
+
   logout = async (
     req: Request,
     res: Response,
@@ -64,7 +71,41 @@ export default class UserController {
     try {
       const args = plainToClass(JwtAuthPayload, { ...req.body });
       await this.blacklistToken(args.id, args.token);
+      await this.removeActiveToken(args.id);
       res.clearCookie(`__${args.type.toLowerCase()}AccessToken`);
+      res.clearCookie("isUserLoggedIn");
+      res.send({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  profile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const args = plainToClass(JwtAuthPayload, { ...req.query });
+      const user = await usersService.getMe(args.id);
+      if (user.sessionAlreadyExist) {
+        res.status(409).send(args.id);
+      } else {
+        res.send({ success: true, data: user.user });
+      }
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  endUserSession = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const args = plainToClass(JwtAuthPayload, { ...req.query });
+      await usersService.endUserSession(args.id);
       res.send({ success: true });
     } catch (error) {
       next(error);

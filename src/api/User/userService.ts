@@ -1,11 +1,32 @@
 import { UserType } from "@prisma/client";
 import { UtilsService } from "../../utils/common";
 import { PrismaClient } from "@prisma/client";
+import { client } from "../../redis.config";
+import _ from "lodash";
+import SocketEmitter from "../../websocket/emitter/socketEmitter";
 
 const prisma: PrismaClient = new PrismaClient();
 const utilsService: UtilsService = new UtilsService();
 
+type ActiveUserPayload = {
+  userId: string;
+  socketId: string;
+};
+
 export class UserService {
+  async endSession(userId: string) {
+    const _activeUsers = await client.get("ActiveUsers");
+    if (_activeUsers) {
+      const activeUsers = JSON.parse(_activeUsers);
+      const userIndex = _.findIndex(activeUsers, [userId, userId]);
+      if (userIndex !== -1) {
+        const user: ActiveUserPayload = activeUsers[userIndex];
+        const socketId = user.socketId;
+        SocketEmitter.playerLogout(socketId);
+      }
+    }
+  }
+
   async getByEmail(email: string) {
     return await prisma.user.findUniqueOrThrow({
       include: { UserMeta: true },
@@ -137,5 +158,18 @@ export class UserService {
       throw new Error("Incorrect Password");
     }
     return user;
+  }
+
+  async getMe(id: string) {
+    const user = await this.getById(id);
+    return { sessionAlreadyExist: false, user };
+  }
+
+  async endUserSession(id: string) {
+    const userToken = await UtilsService.getUserToken(id);
+    if (userToken) {
+      return await this.endSession(id);
+    }
+    return;
   }
 }

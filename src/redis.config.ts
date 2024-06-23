@@ -1,11 +1,15 @@
-import { createClient } from "redis";
+import { Redis } from "ioredis";
 
-const client = createClient({
-  url: process.env.REDIS_URI,
+const client = new Redis(6379, "localhost", {
+  password: process.env.REDIS_PASSWORD,
 });
-(async () => {
-  client.on("error", (err) => console.log("Redis Client Error", err));
-  await client.connect();
-})();
 
-export default client;
+const pubClient = new Redis(6379, "localhost", {
+  password: process.env.REDIS_PASSWORD,
+});
+
+const subClient = new Redis(6379, "localhost", {
+  password: process.env.REDIS_PASSWORD,
+});
+
+export { client, pubClient, subClient };

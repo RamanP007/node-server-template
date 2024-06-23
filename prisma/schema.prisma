@@ -24,16 +24,18 @@ enum UserStatus {
 }
 
 model User {
-  id           String     @id @default(uuid()) @db.Uuid
-  email        String     @unique
-  fullname     String?
-  mobile       String?
-  profileImage String?    @map("profile_image")
-  type         UserType   @default(User)
-  status       UserStatus @default(Active)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  UserMeta     UserMeta[]
+  id               String     @id @default(uuid()) @db.Uuid
+  email            String     @unique
+  fullname         String?
+  mobile           String?
+  profileImage     String?    @map("profile_image")
+  type             UserType   @default(User)
+  status           UserStatus @default(Active)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  UserMeta         UserMeta[]
+  sentMessages     Message[]  @relation("sent_message")
+  receivedMessages Message[]  @relation("received_message")
 
   @@map("user")
 }
@@ -50,4 +52,17 @@ model UserMeta {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("user_meta")
+}
+
+model Message {
+  id         String   @unique @db.Uuid
+  content    String
+  senderId   String   @map("sender_id") @db.Uuid
+  sender     User     @relation("sent_message", fields: [senderId], references: [id])
+  receiverId String   @map("receiver_id") @db.Uuid
+  receiver   User     @relation("received_message", fields: [receiverId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("message")
 }

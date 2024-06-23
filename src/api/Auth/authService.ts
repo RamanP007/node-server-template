@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { Prisma, User, UserType } from "@prisma/client";
+import { User, UserType } from "@prisma/client";
 import { UserService } from "../User";
 import * as ErrorResponse from "../../responses";
-import client from "../../redis.config";
+import { client } from "../../redis.config";
+import SocketEmitter from "../../websocket/emitter/socketEmitter";
 const usersService: UserService = new UserService();
 
 export type JwtPayload = {
@@ -86,12 +87,18 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string): Promise<AuthPayload> {
+  async login(email: string, password: string): Promise<AuthPayload | any> {
     try {
       const user = await usersService.validateCredential(email, password);
 
       if (user instanceof Error) throw new Error(user.message);
+
       const accessToken = this.generateJwt({ id: user.id, type: user.type });
+      const token = await client.get(user.id);
+
+      if (token) {
+        SocketEmitter.sessionAlreadyExist(token);
+      }
       await this.registerToken(user.id, accessToken);
 
       return {

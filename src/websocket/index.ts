@@ -1,24 +1,20 @@
+import { createAdapter } from "@socket.io/redis-adapter";
 import { Server } from "socket.io";
-import * as http from "http";
+import { pubClient, subClient } from "../redis.config";
+import namespaces from "./namespace";
 
-const WEBSOCKET_CORS = {
-  origin: "*",
-  methods: ["GET", "POST"],
-};
+const socketServer = new Server();
+socketServer.on("new_namespace", (namespace) => {
+  namespace.use((socket, next) => {
+    socket.on("error", (error) => {
+      console.log("error", error);
+    });
 
-export const WebSocket = (httpServer: http.Server) => {
-  const io = new Server(httpServer, {
-    pingInterval: 25000,
-    pingTimeout: 5000,
-    cors: {
-      origin: WEBSOCKET_CORS.origin,
-      methods: ["GET", "POST"],
-      credentials: false,
-    },
+    next();
   });
+});
 
-  //Emit event for testing
-  io.on("connection", (socket) => {
-    socket.emit("hello", "world");
-  });
-};
+socketServer.adapter(createAdapter(pubClient, subClient));
+namespaces(socketServer);
+
+export default socketServer;
